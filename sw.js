@@ -5,6 +5,7 @@ const STATIC_ASSETS = [
   './styles.css',
   './app.js',
   './gemini.js',
+  './manifest.json',
   'https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Sans:ital,wght@0,400;0,600;1,400&display=swap'
 ];
 
