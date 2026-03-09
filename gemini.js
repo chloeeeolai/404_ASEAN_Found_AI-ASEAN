@@ -115,8 +115,10 @@ function getDemoResponse(message) {
 }
 
 function buildSystemPrompt(dialect) {
-    const info = DIALECT_INFO[dialect] || DIALECT_INFO.malay;
-    return `You are SEA-LION, a friendly and helpful AI assistant for Southeast Asian communities. You specialize in helping people who speak ${info.name}, spoken in ${info.region}.
+    // If we have a perfectly matched dialect from our hardcoded list, use strict prompt
+    if (dialect) {
+        const info = DIALECT_INFO[dialect] || DIALECT_INFO.malay;
+        return `You are SEA-LION, a friendly and helpful AI assistant for Southeast Asian communities. You specialize in helping people who speak ${info.name}, spoken in ${info.region}.
 
 Your role is to:
 1. Understand questions that may be written in ${info.name} dialect or ${info.standard}
@@ -129,6 +131,19 @@ Your role is to:
 Always be encouraging, patient, and culturally sensitive. Your goal is to bridge the digital divide and help communities access important information in their native language.
 
 Start your response naturally without meta-commentary. Be concise but thorough.`;
+    }
+
+    // Dynamic Auto-Detect Prompt if regex failed to pick a specific one
+    return `You are SEA-LION, a friendly and helpful AI assistant for Southeast Asian communities. 
+
+Your role is to:
+1. AUTO-DETECT the Southeast Asian language or dialect the user is speaking (e.g., Hokkien, Hakka, Tagalog, Cebuano, Javanese, Malay, Iban, Kadazan).
+2. Respond FIRST in the EXACT same dialect as the user, matching their tone and utilizing regional slang.
+3. Provide a brief translation in standard English or the most applicable standard language (e.g. Standard Malay, Standard Tagalog) so there is no misunderstanding.
+4. Keep the response friendly, accessible to elderly/rural users, and focused on basic needs like agriculture, finance, or health.
+5. NEVER start with "I detect you are speaking...". Just organically jump into speaking their dialect.
+
+Remember, you must respond in the same Southeast Asian dialect they speak.`;
 }
 
 async function askGemini(userMessage, dialect = 'malay', isLowBandwidth = false) {
