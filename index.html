@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SEA-LION — AI Platform for Southeast Asian Dialects</title>
+  <meta name="description" content="SEA-LION is an AI-powered conversational platform that allows citizens of Southeast Asia to access information, education, and support in their native dialects including Iban, Kadazan-Dusun, Javanese, Hokkien, and Cebuano." />
+  <link rel="stylesheet" href="styles.css" />
+
+  <!-- Favicon: inline SVG data URI (no external file needed) -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦁</text></svg>" />
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ── Header ─────────────────────────────────────────────── -->
+  <header class="header">
+    <div class="logo">
+      <div class="logo-icon">🦁</div>
+      <div class="logo-text">
+        <h1>SEA-LION</h1>
+        <span>Southeast Asian Language Intelligence Online Network</span>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="dialect-selector">
+        <label for="dialect-select">Dialect:</label>
+        <select id="dialect-select">
+          <option value="malay">Bahasa Melayu 🇲🇾</option>
+          <option value="iban">Iban (Sarawak) 🌿</option>
+          <option value="kadazan">Kadazan-Dusun (Sabah) 🏔</option>
+          <option value="javanese">Javanese (Java) ☕</option>
+          <option value="hokkien">Hokkien / Minnan 🎋</option>
+          <option value="cebuano">Cebuano (Bisaya) 🌊</option>
+          <option value="tagalog">Tagalog (Filipino) 🌺</option>
+        </select>
+      </div>
+      <div class="status-badge">
+        <div class="status-dot"></div>
+        <span id="status-text">Bahasa Melayu Mode</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Low Bandwidth Banner ────────────────────────────────── -->
+  <div class="low-bandwidth-banner">
+    ⚡ Low-Bandwidth Mode Active — Animations disabled, using cached responses for faster access.
+  </div>
+
+  <!-- ── Navigation ────────────────────────────────────────────── -->
+  <nav class="nav">
+    <button class="nav-btn active" data-view="chat" id="nav-chat">
+      <span class="nav-icon">💬</span>
+      <span>Chat Assistant</span>
+    </button>
+    <button class="nav-btn" data-view="education" id="nav-education">
+      <span class="nav-icon">📚</span>
+      <span>Education Hub</span>
+    </button>
+    <button class="nav-btn" data-view="archive" id="nav-archive">
+      <span class="nav-icon">🏛️</span>
+      <span>Cultural Archive</span>
+    </button>
+    <button class="nav-btn" data-view="about" id="nav-about">
+      <span class="nav-icon">ℹ️</span>
+      <span>About SEA-LION</span>
+    </button>
+  </nav>
+
+  <!-- ── Main Content ───────────────────────────────────────── -->
+  <main class="main">
+
+    <!-- ════════════════════════════════════════════════════════
+         CHAT VIEW
+         ════════════════════════════════════════════════════════ -->
+    <section class="view chat-view active" data-view="chat">
+      <div class="chat-container">
+
+        <!-- Messages area -->
+        <div class="chat-messages" id="chat-messages">
+
+          <!-- Welcome Screen -->
+          <div class="chat-welcome" id="chat-welcome">
+            <div class="welcome-hero">🦁</div>
+            <h2>Selamat datang! Welcome to SEA-LION</h2>
+            <p>
+              Your AI assistant for Southeast Asian communities. Ask me anything in your
+              <strong>native dialect</strong> — about health, government aid, farming, finances, or daily life.
+              I will respond in a language you understand.
+            </p>
+            <div class="quick-topics">
+              <button class="quick-chip" data-prompt="How do I apply for government assistance?">🏛 Government Aid</button>
+              <button class="quick-chip" data-prompt="I have a fever and body aches, what should I do?">🏥 Health Advice</button>
+              <button class="quick-chip" data-prompt="How can I protect myself from online scams?">🛡 Scam Protection</button>
+              <button class="quick-chip" data-prompt="What farming subsidies are available for paddy farmers?">🌾 Farm Subsidies</button>
+              <button class="quick-chip" data-prompt="How do I create a strong password for my phone?">📱 Digital Safety</button>
+              <button class="quick-chip" data-prompt="Tell me about the Bantuan Sara Hidup program.">💰 BSH Program</button>
+            </div>
+          </div>
+
+        </div><!-- /chat-messages -->
+
+        <!-- Input area -->
+        <div class="chat-input-area">
+          <div class="input-row">
+            <div class="input-wrapper">
+              <textarea
+                id="chat-input"
+                class="chat-input"
+                rows="1"
+                placeholder="Type your question in any dialect... or press 🎙 to speak"
+                aria-label="Chat input"
+              ></textarea>
+              <button class="voice-btn" id="voice-btn" title="Click to speak" aria-label="Voice input">🎙</button>
+            </div>
+            <button class="send-btn" id="send-btn" aria-label="Send message">➤</button>
+          </div>
+          <p class="input-hint">
+            Powered by Gemini AI • Select your dialect above • 
+            <span id="voice-hint">Chrome/Edge recommended for voice input</span>
+          </p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════════
+         EDUCATION HUB VIEW
+         ════════════════════════════════════════════════════════ -->
+    <section class="view education-view" data-view="education">
+      <div class="section-header">
+        <h2>📚 Community Education Hub</h2>
+        <p>
+          Learn about important topics explained in simple language — healthcare, government services,
+          financial literacy, farming, digital safety, and community programs.
+        </p>
+      </div>
+
+      <!-- Topic grid (rendered by JS) -->
+      <div class="topic-grid" id="topic-grid"></div>
+
+      <!-- Topic detail panel (shown when a card is clicked) -->
+      <div class="topic-detail" id="topic-detail">
+        <div class="topic-detail-header">
+          <h3 id="topic-detail-title">Topic</h3>
+          <button class="close-detail" id="close-detail" aria-label="Close">✕</button>
+        </div>
+        <div class="topic-articles" id="topic-articles"></div>
+        <button class="ask-ai-btn" id="ask-ai-btn">
+          🦁 Ask SEA-LION about this topic
+        </button>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════════
+         CULTURAL ARCHIVE VIEW
+         ════════════════════════════════════════════════════════ -->
+    <section class="view archive-view" data-view="archive">
+      <div class="section-header">
+        <h2>🏛️ Cultural Archive & Dialect Documentation</h2>
+        <p>
+          Preserving Southeast Asia's linguistic heritage — contribute recordings, explore vocabulary,
+          and read traditional stories in their original dialects.
+        </p>
+      </div>
+
+      <div class="archive-grid">
+
+        <!-- Dialect Map Card -->
+        <div class="archive-card">
+          <h3>🗺 Dialect Distribution Map</h3>
+          <p>Interactive overview of major dialect groups across Southeast Asia. Hover over dots to see dialect names.</p>
+          <div class="dialect-map" id="dialect-map">
+            <!-- SVG map background -->
+            <svg viewBox="0 0 400 230" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;opacity:0.15;position:absolute;top:0;left:0">
+              <!-- Simplified SEA landmass shape suggestion -->
+              <ellipse cx="120" cy="90" rx="90" ry="60" fill="#4dd9c0" opacity="0.4"/>
+              <ellipse cx="200" cy="130" rx="50" ry="40" fill="#4dd9c0" opacity="0.3"/>
+              <ellipse cx="290" cy="110" rx="60" ry="50" fill="#4dd9c0" opacity="0.35"/>
+              <ellipse cx="340" cy="160" rx="45" ry="35" fill="#4dd9c0" opacity="0.3"/>
+              <ellipse cx="170" cy="185" rx="55" ry="28" fill="#4dd9c0" opacity="0.25"/>
+            </svg>
+            <!-- Dialect pins -->
+            <div class="dialect-pin" style="left:25%;top:38%">
+              <div class="pin-dot"></div>
+              <div class="pin-label">Bahasa Melayu</div>
+            </div>
+            <div class="dialect-pin" style="left:35%;top:52%">
+              <div class="pin-dot gold"></div>
+              <div class="pin-label">Iban</div>
+            </div>
+            <div class="dialect-pin" style="left:42%;top:42%">
+              <div class="pin-dot gold"></div>
+              <div class="pin-label">Kadazan-Dusun</div>
+            </div>
+            <div class="dialect-pin" style="left:55%;top:48%">
+              <div class="pin-dot"></div>
+              <div class="pin-label">Javanese</div>
+            </div>
+            <div class="dialect-pin" style="left:30%;top:30%">
+              <div class="pin-dot violet"></div>
+              <div class="pin-label">Hokkien</div>
+            </div>
+            <div class="dialect-pin" style="left:72%;top:44%">
+              <div class="pin-dot coral"></div>
+              <div class="pin-label">Cebuano</div>
+            </div>
+            <div class="dialect-pin" style="left:65%;top:33%">
+              <div class="pin-dot coral"></div>
+              <div class="pin-label">Tagalog</div>
+            </div>
+            <div class="dialect-pin" style="left:48%;top:62%">
+              <div class="pin-dot"></div>
+              <div class="pin-label">Balinese</div>
+            </div>
+          </div>
+          <p style="font-size:12px;color:var(--text-muted);margin-top:8px">
+            📍 SEA-LION currently supports 7 dialects with ongoing expansion.
+          </p>
+        </div>
+
+        <!-- Contribute Recording Card -->
+        <div class="archive-card">
+          <h3>🎙 Contribute Dialect Recordings</h3>
+          <p>
+            Help preserve your language! Record yourself speaking naturally — greetings, daily phrases,
+            or traditional stories. All contributions are reviewed and added to the dialect database.
+          </p>
+          <div class="record-area">
+            <button class="record-btn-large" id="archive-record-btn" aria-label="Start recording">🎙</button>
+            <p class="record-prompt">
+              Press to start recording. Speak naturally in your dialect for at least 30 seconds.
+              Example: <em>"Describe your morning routine."</em>
+            </p>
+            <p id="archive-status" style="font-size:13px;font-weight:600;min-height:20px;"></p>
+          </div>
+          <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
+            <span class="tag">📝 Transcribed by Linguists</span>
+            <span class="tag">🔒 Anonymous by Default</span>
+            <span class="tag">🌍 Publicly Archived</span>
+          </div>
+        </div>
+
+        <!-- Vocabulary Card -->
+        <div class="archive-card">
+          <h3>📖 Dialect Vocabulary</h3>
+          <p>A living dictionary of common words and expressions across SEA dialects, curated by community contributors and language researchers.</p>
+          <div class="vocab-list" id="vocab-list">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <!-- Traditional Stories Card -->
+        <div class="archive-card">
+          <h3>📜 Traditional Stories</h3>
+          <p>Folk tales, legends, and oral histories from Southeast Asian communities — preserved in original dialects with translations.</p>
+          <div class="stories-list" id="stories-list">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+      </div><!-- /archive-grid -->
+    </section>
+
+    <!-- ════════════════════════════════════════════════════════
+         ABOUT VIEW
+         ════════════════════════════════════════════════════════ -->
+    <section class="view about-view" data-view="about">
+
+      <div class="about-hero">
+        <h2>Bridging the Digital Divide<br>Across Southeast Asia</h2>
+        <p>
+          SEA-LION is an AI-powered conversational platform that empowers rural and elderly communities
+          in Southeast Asia by providing access to information, education, and services
+          in their native dialects.
+        </p>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-num">7+</div>
+          <div class="stat-label">Dialects Supported</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">5</div>
+          <div class="stat-label">Knowledge Domains</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">650M+</div>
+          <div class="stat-label">People in SEA</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">40%</div>
+          <div class="stat-label">Lack Digital Access</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">100+</div>
+          <div class="stat-label">Endangered Dialects</div>
+        </div>
+      </div>
+
+      <!-- Key Features -->
+      <div class="section-header">
+        <h2>Key Features</h2>
+        <p>Designed for accessibility, cultural pride, and community empowerment.</p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card">
+          <span class="feature-icon">🎙</span>
+          <h3>Voice-Enabled Chat</h3>
+          <p>Users can speak questions in their dialect. SEA-LION understands, translates, and responds in language they know.</p>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">🌐</span>
+          <h3>Dialect Translation</h3>
+          <p>Bidirectional translation between local dialects and standard languages makes complex government information accessible.</p>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">📚</span>
+          <h3>Community Education</h3>
+          <p>Health, finance, farming, and digital literacy content presented in simple, culturally relevant language.</p>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">📶</span>
+          <h3>Low-Bandwidth Mode</h3>
+          <p>Works in poor connectivity areas with offline caching, reduced animations, and pre-stored common responses.</p>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">🏛️</span>
+          <h3>Cultural Preservation</h3>
+          <p>Community-driven archive of dialect recordings, vocabulary, and traditional stories to prevent linguistic extinction.</p>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">🤝</span>
+          <h3>Community-First</h3>
+          <p>Built with input from linguists, rural communities, and cultural organizations to ensure relevance and accuracy.</p>
+        </div>
+      </div>
+
+      <!-- Supported Dialects -->
+      <div class="section-header" style="margin-top:32px">
+        <h2>Supported Dialects</h2>
+        <p>Expanding from Malaysia and the Philippines to all of Southeast Asia.</p>
+      </div>
+
+      <div class="dialects-list">
+        <div class="dialect-pill">
+          <span class="flag">🇲🇾</span>
+          <div class="info"><strong>Bahasa Melayu</strong><small>Malaysia / Brunei</small></div>
+        </div>
+        <div class="dialect-pill">
+          <span class="flag">🌿</span>
+          <div class="info"><strong>Iban</strong><small>Sarawak, Malaysia</small></div>
+        </div>
+        <div class="dialect-pill">
+          <span class="flag">🏔</span>
+          <div class="info"><strong>Kadazan-Dusun</strong><small>Sabah, Malaysia</small></div>
+        </div>
+        <div class="dialect-pill">
+          <span class="flag">🇮🇩</span>
+          <div class="info"><strong>Javanese</strong><small>Java, Indonesia</small></div>
+        </div>
+        <div class="dialect-pill">
+          <span class="flag">🎋</span>
+          <div class="info"><strong>Hokkien / Minnan</strong><small>SEA Chinese communities</small></div>
+        </div>
+        <div class="dialect-pill">
+          <span class="flag">🌊</span>
+          <div class="info"><strong>Cebuano (Bisaya)</strong><small>Visayas, Philippines</small></div>
+        </div>
+        <div class="dialect-pill">
+          <span class="flag">🇵🇭</span>
+          <div class="info"><strong>Tagalog</strong><small>Luzon, Philippines</small></div>
+        </div>
+      </div>
+
+      <!-- SDG Alignment -->
+      <div class="section-header" style="margin-top:40px">
+        <h2>🌍 SDG Alignment</h2>
+        <p>SEA-LION supports multiple United Nations Sustainable Development Goals.</p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card">
+          <span class="feature-icon">📖</span>
+          <h3>SDG 4 — Quality Education</h3>
+          <p>Making educational resources accessible to communities who previously couldn't engage with content in standard languages.</p>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">⚖️</span>
+          <h3>SDG 10 — Reduced Inequalities</h3>
+          <p>Bridging the digital and language divide for rural, elderly, and marginalized Southeast Asian communities.</p>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">🌐</span>
+          <h3>SDG 17 — Partnerships for Goals</h3>
+          <p>Collaborating with universities, linguists, schools, and cultural organizations to build inclusive AI systems.</p>
+        </div>
+      </div>
+
+      <div style="text-align:center;margin-top:40px;padding-bottom:40px">
+        <p style="color:var(--text-muted);font-size:13px">
+          SEA-LION was developed for the UMDAC Datathon 2025 by Team Need Sleep Kia.<br>
+          Built with ❤ for Southeast Asia's diverse communities.
+        </p>
+      </div>
+
+    </section>
+
+  </main><!-- /main -->
+
+  <!-- ── Footer ─────────────────────────────────────────────── -->
+  <footer class="footer">
+    <div class="footer-left">
+      <strong>SEA-LION</strong> by Team Need Sleep Kia • UMDAC Datathon 2025 •
+      Powered by <strong>Gemini AI</strong>
+    </div>
+    <div class="bandwidth-toggle">
+      <div class="low-bw-label">
+        <span class="bw-icon">📶</span>
+        Low-Bandwidth Mode
+      </div>
+      <label class="toggle-switch" title="Enable low-bandwidth mode for slow connections">
+        <input type="checkbox" id="bw-toggle" aria-label="Low bandwidth mode toggle" />
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+  </footer>
+
+  <!-- ── Modal Overlay ──────────────────────────────────────── -->
+  <div class="modal-overlay" id="modal-overlay" role="dialog" aria-modal="true">
+    <div class="modal">
+      <div id="modal-body">
+        <button class="modal-close" id="modal-close" aria-label="Close modal">✕</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /#app -->
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
