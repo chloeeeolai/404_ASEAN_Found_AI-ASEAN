@@ -7,11 +7,13 @@ import { askGemini, DIALECT_INFO } from './gemini.js';
 
 // ── State ─────────────────────────────────────────────────────
 let currentView = 'chat';
-let currentDialect = 'malay';
+let currentDialect = 'auto';  // 'auto' means detect from message content
 let isLowBandwidth = false;
 let isRecording = false;
+let isVoiceMessage = false;   // true when the current message was recorded by voice
 let isBotTyping = false;
 let recognition = null;
+let voiceTranscript = '';     // internal transcript for voice (not shown in input)
 let archiveRecording = false;
 let archiveMediaRecorder = null;
 let archiveChunks = [];
@@ -22,6 +24,7 @@ const chatHistory = [];
 // ── DOM Refs ──────────────────────────────────────────────────
 const views = document.querySelectorAll('.view');
 const navBtns = document.querySelectorAll('.nav-btn');
+const dialectSelect = document.getElementById('dialect-select');
 const chatMessages = document.getElementById('chat-messages');
 const chatInput = document.getElementById('chat-input');
 const sendBtn = document.getElementById('send-btn');
@@ -47,16 +50,38 @@ navBtns.forEach(btn => {
 // ── Dialect Detection ──────────────────────────────────────────
 function detectDialectLocal(text) {
     const lower = text.toLowerCase();
-    if (lower.match(/\b(lu|ho|boh|wa|si|di|ge|bang-chu|góa|bô|hiáu)\b/)) return 'hokkien';
+    if (lower.match(/\b(lu|ho|boh|wa|si|di|ge|bang-chu|g\u00f3a|b\u00f4|hi\u00e1u)\b/)) return 'hokkien';
     if (lower.match(/\b(sugeng|rawuh|kula|mboten|mangertos)\b/)) return 'javanese';
     if (lower.match(/\b(maayong|adlaw|dili|kahibalo)\b/)) return 'cebuano';
     if (lower.match(/\b(salamat|magandang|araw|hindi)\b/)) return 'tagalog';
     if (lower.match(/\b(selamat|datai|aku|nemu|enda|bisi|makan)\b/)) return 'iban';
     if (lower.match(/\b(tabak|tobilung|montok|tabi)\b/)) return 'kadazan';
     if (lower.match(/\b(apa|khabar|saya|tak|faham|bantuan)\b/)) return 'malay';
-    // Fallback for demo words
     if (lower.match(/\b(hi|hello|how|are|you|help|what|why|where)\b/)) return 'malay';
     return null;
+}
+
+function updateDialectUI(dialect) {
+    const info = DIALECT_INFO[dialect];
+    if (!info) return;
+    document.getElementById('status-text').textContent = info.name + ' Mode';
+    // Keep selector in sync if user had it on auto
+    if (dialectSelect && dialectSelect.value === 'auto') {
+        // don't change selector value, just update status text
+    }
+}
+
+// ── Dialect Selector ──────────────────────────────────────────
+if (dialectSelect) {
+    dialectSelect.addEventListener('change', () => {
+        currentDialect = dialectSelect.value;
+        if (currentDialect === 'auto') {
+            document.getElementById('status-text').textContent = 'Smart Mode';
+        } else {
+            document.getElementById('status-text').textContent =
+                (DIALECT_INFO[currentDialect]?.name || 'Bahasa Melayu') + ' Mode';
+        }
+    });
 }
 
 // ── Low-bandwidth Mode ────────────────────────────────────────
@@ -70,7 +95,7 @@ function formatTime(d = new Date()) {
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-function appendMessage(role, text, source = null) {
+function appendMessage(role, text, source = null, isVoice = false) {
     // Remove welcome screen if present
     const welcome = document.getElementById('chat-welcome');
     if (welcome) welcome.remove();
@@ -83,10 +108,21 @@ function appendMessage(role, text, source = null) {
         ? `<span class="source-badge ${source}">${source === 'gemini' ? '✦ Gemini' : source === 'demo' ? '◈ Demo' : '⚡ Fallback'}</span>`
         : '';
 
+    // Voice messages show as a voice note bubble (like WhatsApp)
+    const bubbleContent = (role === 'user' && isVoice)
+        ? `<div class="voice-note-bubble">
+            <span class="voice-note-icon">🎤</span>
+            <div class="voice-note-waveform">
+              ${Array.from({ length: 12 }, (_, i) => `<span class="wave-bar" style="--h:${20 + Math.random() * 60}%"></span>`).join('')}
+            </div>
+            <span class="voice-note-label">Voice Message</span>
+          </div>`
+        : `${escapeHtml(text).replace(/\n/g, '<br>')}`;
+
     msg.innerHTML = `
     <div class="message-avatar">${avatar}</div>
     <div>
-      <div class="message-bubble">${escapeHtml(text).replace(/\n/g, '<br>')}</div>
+      <div class="message-bubble">${bubbleContent}</div>
       <div class="message-meta">
         ${formatTime()}
         ${sourceBadge}
@@ -124,29 +160,32 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-async function sendMessage(text) {
+async function sendMessage(text, fromVoice = false) {
     if (!text.trim() || isBotTyping) return;
     const userText = text.trim();
     chatInput.value = '';
     autoResizeTextarea();
 
-    appendMessage('user', userText);
+    // Show voice note bubble OR text bubble depending on origin
+    appendMessage('user', userText, null, fromVoice);
     chatHistory.push({ role: 'user', text: userText });
 
     isBotTyping = true;
     sendBtn.disabled = true;
     showTypingIndicator();
 
-    // Auto-detect dialect locally for demo mode or UI hint
-    const detected = detectDialectLocal(userText);
-    if (detected) {
-        currentDialect = detected;
-        const badge = document.getElementById('detected-dialect-badge');
-        if (badge) badge.textContent = (DIALECT_INFO[currentDialect]?.name || 'Detected') + ' 🎙️';
-        document.getElementById('status-text').textContent = (DIALECT_INFO[currentDialect]?.name || 'Smart') + ' Mode';
+    // ── Dialect detection (runs on EVERY message) ──────────────
+    let activeDialect = currentDialect;
+    if (currentDialect === 'auto') {
+        // Use local heuristic first; fall back to Gemini's own detection
+        const detected = detectDialectLocal(userText);
+        activeDialect = detected || 'auto';
+        if (detected) {
+            updateDialectUI(detected);
+        }
     }
 
-    const { text: response, source } = await askGemini(userText, currentDialect, isLowBandwidth);
+    const { text: response, source } = await askGemini(userText, activeDialect, isLowBandwidth);
 
     removeTypingIndicator();
     appendMessage('bot', response, source);
@@ -196,26 +235,36 @@ function setupSpeechRecognition() {
     recognition.interimResults = true;
 
     recognition.onresult = (event) => {
-        let transcript = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-            transcript += event.results[i][0].transcript;
+        // Accumulate transcript internally — do NOT write to chatInput
+        voiceTranscript = '';
+        for (let i = 0; i < event.results.length; i++) {
+            voiceTranscript += event.results[i][0].transcript;
         }
-        chatInput.value = transcript;
-        autoResizeTextarea();
+        // Show a subtle hint in the input (italic, greyed)
+        chatInput.placeholder = `🎤 ${voiceTranscript}`;
     };
 
     recognition.onend = () => {
         isRecording = false;
+        isVoiceMessage = false;
         voiceBtn.classList.remove('recording');
         voiceBtn.innerHTML = '🎙';
-        if (chatInput.value.trim()) sendMessage(chatInput.value);
+        chatInput.placeholder = 'Type your question in any dialect... or press 🎙 to speak';
+        // Send with fromVoice=true so it shows as a voice bubble
+        if (voiceTranscript.trim()) {
+            sendMessage(voiceTranscript, true);
+            voiceTranscript = '';
+        }
     };
 
     recognition.onerror = (e) => {
         console.warn('Speech recognition error:', e.error);
         isRecording = false;
+        isVoiceMessage = false;
+        voiceTranscript = '';
         voiceBtn.classList.remove('recording');
         voiceBtn.innerHTML = '🎙';
+        chatInput.placeholder = 'Type your question in any dialect... or press 🎙 to speak';
     };
 }
 
@@ -225,13 +274,17 @@ voiceBtn.addEventListener('click', () => {
         recognition.stop();
     } else {
         isRecording = true;
+        isVoiceMessage = true;
+        voiceTranscript = '';
         voiceBtn.classList.add('recording');
         voiceBtn.innerHTML = '⏹';
+        chatInput.value = '';  // clear any typed text
+        chatInput.placeholder = '🔴 Listening... speak now';
 
-        // Set language hint based on dialect
+        // In auto mode, use a broad multilingual hint; otherwise use dialect-specific
         const langMap = {
             iban: 'ms-MY', kadazan: 'ms-MY', javanese: 'id-ID',
-            hokkien: 'zh-TW', cebuano: 'fil-PH', tagalog: 'fil-PH', malay: 'ms-MY',
+            hokkien: 'zh-TW', cebuano: 'fil-PH', tagalog: 'fil-PH', malay: 'ms-MY', auto: 'ms-MY',
         };
         recognition.lang = langMap[currentDialect] || 'ms-MY';
         recognition.start();
