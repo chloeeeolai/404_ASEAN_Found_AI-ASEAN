@@ -22,7 +22,6 @@ const chatHistory = [];
 // ── DOM Refs ──────────────────────────────────────────────────
 const views = document.querySelectorAll('.view');
 const navBtns = document.querySelectorAll('.nav-btn');
-const dialectSelect = document.getElementById('dialect-select');
 const chatMessages = document.getElementById('chat-messages');
 const chatInput = document.getElementById('chat-input');
 const sendBtn = document.getElementById('send-btn');
@@ -45,12 +44,20 @@ navBtns.forEach(btn => {
     btn.addEventListener('click', () => switchView(btn.dataset.view));
 });
 
-// ── Dialect Selector ──────────────────────────────────────────
-dialectSelect.addEventListener('change', () => {
-    currentDialect = dialectSelect.value;
-    document.getElementById('status-text').textContent =
-        `${DIALECT_INFO[currentDialect]?.name || 'Bahasa Melayu'} Mode`;
-});
+// ── Dialect Detection ──────────────────────────────────────────
+function detectDialectLocal(text) {
+    const lower = text.toLowerCase();
+    if (lower.match(/\b(lu|ho|boh|wa|si|di|ge|bang-chu|góa|bô|hiáu)\b/)) return 'hokkien';
+    if (lower.match(/\b(sugeng|rawuh|kula|mboten|mangertos)\b/)) return 'javanese';
+    if (lower.match(/\b(maayong|adlaw|dili|kahibalo)\b/)) return 'cebuano';
+    if (lower.match(/\b(salamat|magandang|araw|hindi)\b/)) return 'tagalog';
+    if (lower.match(/\b(selamat|datai|aku|nemu|enda|bisi|makan)\b/)) return 'iban';
+    if (lower.match(/\b(tabak|tobilung|montok|tabi)\b/)) return 'kadazan';
+    if (lower.match(/\b(apa|khabar|saya|tak|faham|bantuan)\b/)) return 'malay';
+    // Fallback for demo words
+    if (lower.match(/\b(hi|hello|how|are|you|help|what|why|where)\b/)) return 'malay';
+    return null;
+}
 
 // ── Low-bandwidth Mode ────────────────────────────────────────
 bwToggle.addEventListener('change', () => {
@@ -129,6 +136,15 @@ async function sendMessage(text) {
     isBotTyping = true;
     sendBtn.disabled = true;
     showTypingIndicator();
+
+    // Auto-detect dialect locally for demo mode or UI hint
+    const detected = detectDialectLocal(userText);
+    if (detected) {
+        currentDialect = detected;
+        const badge = document.getElementById('detected-dialect-badge');
+        if (badge) badge.textContent = (DIALECT_INFO[currentDialect]?.name || 'Detected') + ' 🎙️';
+        document.getElementById('status-text').textContent = (DIALECT_INFO[currentDialect]?.name || 'Smart') + ' Mode';
+    }
 
     const { text: response, source } = await askGemini(userText, currentDialect, isLowBandwidth);
 

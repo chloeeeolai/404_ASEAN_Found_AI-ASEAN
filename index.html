@@ -31,21 +31,15 @@
       </div>
 
       <div class="header-right">
-        <div class="dialect-selector">
-          <label for="dialect-select">Dialect:</label>
-          <select id="dialect-select">
-            <option value="malay">Bahasa Melayu 🇲🇾</option>
-            <option value="iban">Iban (Sarawak) 🌿</option>
-            <option value="kadazan">Kadazan-Dusun (Sabah) 🏔</option>
-            <option value="javanese">Javanese (Java) ☕</option>
-            <option value="hokkien">Hokkien / Minnan 🎋</option>
-            <option value="cebuano">Cebuano (Bisaya) 🌊</option>
-            <option value="tagalog">Tagalog (Filipino) 🌺</option>
-          </select>
+        <div class="dialect-selector" id="dialect-display" style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 14px; opacity: 0.8;">Dialect:</span>
+          <span id="detected-dialect-badge"
+            style="background: rgba(77, 217, 192, 0.2); color: #4dd9c0; padding: 4px 10px; border-radius: 12px; font-weight: 600; font-size: 13px;">Auto-Detecting
+            🎙️</span>
         </div>
         <div class="status-badge">
           <div class="status-dot"></div>
-          <span id="status-text">Bahasa Melayu Mode</span>
+          <span id="status-text">Smart Mode</span>
         </div>
       </div>
     </header>
