@@ -50,14 +50,15 @@ navBtns.forEach(btn => {
 // ── Dialect Detection ──────────────────────────────────────────
 function detectDialectLocal(text) {
     const lower = text.toLowerCase();
-    if (lower.match(/\b(lu|ho|boh|wa|si|di|ge|bang-chu|g\u00f3a|b\u00f4|hi\u00e1u)\b/)) return 'hokkien';
-    if (lower.match(/\b(sugeng|rawuh|kula|mboten|mangertos)\b/)) return 'javanese';
-    if (lower.match(/\b(maayong|adlaw|dili|kahibalo)\b/)) return 'cebuano';
-    if (lower.match(/\b(salamat|magandang|araw|hindi)\b/)) return 'tagalog';
-    if (lower.match(/\b(selamat|datai|aku|nemu|enda|bisi|makan)\b/)) return 'iban';
-    if (lower.match(/\b(tabak|tobilung|montok|tabi)\b/)) return 'kadazan';
-    if (lower.match(/\b(apa|khabar|saya|tak|faham|bantuan)\b/)) return 'malay';
-    if (lower.match(/\b(hi|hello|how|are|you|help|what|why|where)\b/)) return 'malay';
+    if (lower.match(/\b(lu|ho|boh|wa|lah|lor|leh|aiyah|hao|mai|g\u00f3a|b\u00f4|hi\u00e1u)\b/)) return 'hokkien';
+    if (lower.match(/\b(sugeng|rawuh|kula|mboten|mangertos|opo|ngopo|piye)\b/)) return 'javanese';
+    if (lower.match(/\b(maayong|adlaw|dili|kahibalo|unsaon|nganong|unsa)\b/)) return 'cebuano';
+    if (lower.match(/\b(salamat|magandang|kumusta|paano|bakit|ano|saan)\b/)) return 'tagalog';
+    if (lower.match(/\b(selamat datai|nemu|enda|bisi|nuan|kami nemu)\b/)) return 'iban';
+    if (lower.match(/\b(tabak|tobilung|montok|tabi|iso|nokuro)\b/)) return 'kadazan';
+    // Broad Malay — covers everyday words the user likely speaks
+    if (lower.match(/\b(apa|khabar|saya|tak|faham|bantuan|berapa|sekarang|pukul|boleh|tolong|terima kasih|macam|mana|kenapa|siapa|pergi|rumah|kerja|wang|sakit|doktor|hari|bulan|ada|tidak|ini|itu|dengan|untuk|dari|pada|juga|sudah|akan|kalau|bila|bagaimana|nak|dah|la|eh|weh|orang|tempat|benda)\b/)) return 'malay';
+    if (lower.match(/\b(hi|hello|how|are|you|help|what|why|where|when|who|please|thank|time|now)\b/)) return 'malay';
     return null;
 }
 

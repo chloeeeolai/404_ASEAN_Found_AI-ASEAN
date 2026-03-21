@@ -172,15 +172,23 @@ async function askGemini(userMessage, dialect = 'malay', isLowBandwidth = false)
         });
 
         if (!response.ok) {
-            throw new Error(`API error: ${response.status}`);
+            // Surface the real error message from the API
+            const errBody = await response.json().catch(() => ({}));
+            const errMsg = errBody?.error?.message || `HTTP ${response.status}`;
+            throw new Error(`API error: ${errMsg}`);
         }
 
         const data = await response.json();
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text || getDemoResponse(userMessage);
         return { text, source: 'gemini' };
     } catch (err) {
-        console.warn('Gemini API failed, using demo response:', err);
-        return { text: getDemoResponse(userMessage), source: 'fallback' };
+        // Log the FULL error so it shows up in the browser's DevTools console
+        console.error('\u274c Gemini API failed:', err.message, err);
+        // Return the error reason so it shows in the chat bubble for debugging
+        const errText = err.message?.includes('API error:')
+            ? `⚠️ Could not reach AI: ${err.message}\n\n(Offline fallback): ${getDemoResponse(userMessage)}`
+            : getDemoResponse(userMessage);
+        return { text: errText, source: 'fallback' };
     }
 }
 
