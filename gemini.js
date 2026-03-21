@@ -4,7 +4,7 @@
  */
 
 // Replace with your actual Gemini API key
-const GEMINI_API_KEY = 'AIzaSyCvQI2-iqAaVNCDNoBV0yVsEKSrG_qO0oM';
+const GEMINI_API_KEY = 'AIzaSyCNxr6cdn_cj_hQjgTS9ckPIc_3IkgkbGk';
 const GEMINI_MODEL = 'gemini-2.0-flash';
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
