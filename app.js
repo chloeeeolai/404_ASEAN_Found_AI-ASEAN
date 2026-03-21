@@ -10,10 +10,12 @@ let currentView = 'chat';
 let currentDialect = 'auto';  // 'auto' means detect from message content
 let isLowBandwidth = false;
 let isRecording = false;
-let isVoiceMessage = false;   // true when the current message was recorded by voice
+let isVoiceMessage = false;
 let isBotTyping = false;
 let recognition = null;
-let voiceTranscript = '';     // internal transcript for voice (not shown in input)
+let voiceTranscript = '';
+let voiceMediaRecorder = null;  // captures actual audio for playback
+let voiceAudioChunks = [];
 let archiveRecording = false;
 let archiveMediaRecorder = null;
 let archiveChunks = [];
@@ -96,7 +98,7 @@ function formatTime(d = new Date()) {
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-function appendMessage(role, text, source = null, isVoice = false) {
+function appendMessage(role, text, source = null, audioUrl = null) {
     // Remove welcome screen if present
     const welcome = document.getElementById('chat-welcome');
     if (welcome) welcome.remove();
@@ -109,14 +111,14 @@ function appendMessage(role, text, source = null, isVoice = false) {
         ? `<span class="source-badge ${source}">${source === 'gemini' ? '✦ Gemini' : source === 'demo' ? '◈ Demo' : '⚡ Fallback'}</span>`
         : '';
 
-    // Voice messages show as a voice note bubble (like WhatsApp)
-    const bubbleContent = (role === 'user' && isVoice)
-        ? `<div class="voice-note-bubble">
-            <span class="voice-note-icon">🎤</span>
+    // Voice messages show as a WhatsApp-style voice note bubble with real playback
+    const bubbleContent = (role === 'user' && audioUrl)
+        ? `<div class="voice-note-bubble" data-audio="${audioUrl}">
+            <button class="voice-play-btn" aria-label="Play voice message">▶️</button>
             <div class="voice-note-waveform">
-              ${Array.from({ length: 12 }, (_, i) => `<span class="wave-bar" style="--h:${20 + Math.random() * 60}%"></span>`).join('')}
+              ${Array.from({ length: 20 }, () => `<span class="wave-bar" style="--h:${15 + Math.random() * 70}%"></span>`).join('')}
             </div>
-            <span class="voice-note-label">Voice Message</span>
+            <span class="voice-note-duration" id="dur-${Date.now()}">0:00</span>
           </div>`
         : `${escapeHtml(text).replace(/\n/g, '<br>')}`;
 
@@ -161,14 +163,14 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-async function sendMessage(text, fromVoice = false) {
+async function sendMessage(text, audioUrl = null) {
     if (!text.trim() || isBotTyping) return;
     const userText = text.trim();
     chatInput.value = '';
     autoResizeTextarea();
 
-    // Show voice note bubble OR text bubble depending on origin
-    appendMessage('user', userText, null, fromVoice);
+    // Show voice note bubble (with play button) OR plain text bubble
+    appendMessage('user', userText, null, audioUrl);
     chatHistory.push({ role: 'user', text: userText });
 
     isBotTyping = true;
@@ -181,15 +183,14 @@ async function sendMessage(text, fromVoice = false) {
     let activeDialect = currentDialect;
     const detected = detectDialectLocal(userText);
 
-    if (fromVoice) {
+    if (audioUrl) {
         // Voice transcript is the clearest dialect signal — always prefer the detected result
-        activeDialect = detected || 'auto'; // 'auto' = let Gemini self-detect from the text
+        activeDialect = detected || 'auto';
         if (detected) updateDialectUI(detected);
     } else if (currentDialect === 'auto') {
         activeDialect = detected || 'auto';
         if (detected) updateDialectUI(detected);
     }
-    // If user manually chose a specific dialect (not auto, not voice), respect their choice.
 
     const { text: response, source } = await askGemini(userText, activeDialect, isLowBandwidth);
 
@@ -246,7 +247,6 @@ function setupSpeechRecognition() {
         for (let i = 0; i < event.results.length; i++) {
             voiceTranscript += event.results[i][0].transcript;
         }
-        // Show a subtle hint in the input (italic, greyed)
         chatInput.placeholder = `🎤 ${voiceTranscript}`;
     };
 
@@ -256,9 +256,12 @@ function setupSpeechRecognition() {
         voiceBtn.classList.remove('recording');
         voiceBtn.innerHTML = '🎙';
         chatInput.placeholder = 'Type your question in any dialect... or press 🎙 to speak';
-        // Send with fromVoice=true so it shows as a voice bubble
-        if (voiceTranscript.trim()) {
-            sendMessage(voiceTranscript, true);
+
+        // Stop MediaRecorder — its onstop will fire sendMessage with the audio blob
+        if (voiceMediaRecorder && voiceMediaRecorder.state !== 'inactive') {
+            voiceMediaRecorder.stop();
+        } else if (voiceTranscript.trim()) {
+            sendMessage(voiceTranscript, null);
             voiceTranscript = '';
         }
     };
@@ -271,23 +274,49 @@ function setupSpeechRecognition() {
         voiceBtn.classList.remove('recording');
         voiceBtn.innerHTML = '🎙';
         chatInput.placeholder = 'Type your question in any dialect... or press 🎙 to speak';
+        if (voiceMediaRecorder && voiceMediaRecorder.state !== 'inactive') voiceMediaRecorder.stop();
     };
 }
 
-voiceBtn.addEventListener('click', () => {
+voiceBtn.addEventListener('click', async () => {
     if (!recognition) return;
     if (isRecording) {
-        recognition.stop();
+        recognition.stop(); // onend will handle cleanup + send
     } else {
+        // Request mic access for BOTH SpeechRecognition AND MediaRecorder
+        let stream;
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch (err) {
+            chatInput.placeholder = '⚠️ Microphone access denied';
+            return;
+        }
+
         isRecording = true;
         isVoiceMessage = true;
         voiceTranscript = '';
+        voiceAudioChunks = [];
         voiceBtn.classList.add('recording');
         voiceBtn.innerHTML = '⏹';
-        chatInput.value = '';  // clear any typed text
+        chatInput.value = '';
         chatInput.placeholder = '🔴 Listening... speak now';
 
-        // In auto mode, use a broad multilingual hint; otherwise use dialect-specific
+        // Start MediaRecorder for real audio capture
+        voiceMediaRecorder = new MediaRecorder(stream);
+        voiceMediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) voiceAudioChunks.push(e.data); };
+        voiceMediaRecorder.onstop = () => {
+            stream.getTracks().forEach(t => t.stop()); // release mic
+            if (voiceTranscript.trim()) {
+                const blob = new Blob(voiceAudioChunks, { type: 'audio/webm' });
+                const audioUrl = URL.createObjectURL(blob);
+                sendMessage(voiceTranscript, audioUrl);
+            }
+            voiceTranscript = '';
+            voiceAudioChunks = [];
+        };
+        voiceMediaRecorder.start();
+
+        // Start SpeechRecognition for transcript
         const langMap = {
             iban: 'ms-MY', kadazan: 'ms-MY', javanese: 'id-ID',
             hokkien: 'zh-TW', cebuano: 'fil-PH', tagalog: 'fil-PH', malay: 'ms-MY', auto: 'ms-MY',
