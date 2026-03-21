@@ -476,6 +476,66 @@ body::after {
   border-bottom-left-radius: 4px;
 }
 
+/* Voice note bubble */
+.voice-note-bubble {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 220px;
+  max-width: 280px;
+}
+
+.voice-note-bubble .voice-top-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.voice-mic-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.voice-note-waveform {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 28px;
+  flex: 1;
+}
+
+.wave-bar {
+  display: inline-block;
+  width: 3px;
+  height: var(--h, 50%);
+  background: rgba(255,255,255,0.75);
+  border-radius: 2px;
+  animation: waveAnim 1.4s ease-in-out infinite alternate;
+}
+.wave-bar:nth-child(odd)  { animation-delay: 0.1s; }
+.wave-bar:nth-child(3n)   { animation-delay: 0.25s; }
+
+@keyframes waveAnim {
+  from { transform: scaleY(0.35); opacity: 0.45; }
+  to   { transform: scaleY(1);    opacity: 1; }
+}
+
+/* Native audio element — styled to fit dark theme */
+.voice-audio-player {
+  width: 100%;
+  height: 32px;
+  outline: none;
+  border-radius: 20px;
+  filter: invert(1) hue-rotate(160deg) saturate(0.7) brightness(1.1);
+}
+
+/* Message body layout */
+.message-body {
+  display: flex;
+  flex-direction: column;
+}
+.message.user .message-body { align-items: flex-end; }
+
 .message-meta {
   font-size: 11px;
   color: var(--text-muted);
@@ -510,72 +570,6 @@ body::after {
 .source-badge.fallback {
   background: rgba(255, 107, 107, 0.2);
   color: var(--coral);
-}
-
-/* Voice note bubble (WhatsApp-style) */
-.voice-note-bubble {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 2px 0;
-  min-width: 200px;
-}
-
-.voice-play-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(255,255,255,0.25);
-  color: #fff;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: background var(--transition), transform var(--transition);
-}
-.voice-play-btn:hover {
-  background: rgba(255,255,255,0.4);
-  transform: scale(1.1);
-}
-
-.voice-note-waveform {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  height: 30px;
-  flex: 1;
-}
-
-.wave-bar {
-  display: inline-block;
-  width: 3px;
-  height: var(--h, 50%);
-  background: rgba(255, 255, 255, 0.85);
-  border-radius: 2px;
-  animation: waveAnim 1.2s ease-in-out infinite alternate;
-  animation-delay: calc(var(--i, 0) * 0.08s);
-}
-
-@keyframes waveAnim {
-  from {
-    transform: scaleY(0.5);
-    opacity: 0.6;
-  }
-
-  to {
-    transform: scaleY(1);
-    opacity: 1;
-  }
-}
-
-.voice-note-label {
-  font-size: 12px;
-  opacity: 0.8;
-  white-space: nowrap;
-  font-style: italic;
 }
 
 /* Typing indicator */

@@ -111,14 +111,14 @@ function appendMessage(role, text, source = null, audioUrl = null) {
         ? `<span class="source-badge ${source}">${source === 'gemini' ? '✦ Gemini' : source === 'demo' ? '◈ Demo' : '⚡ Fallback'}</span>`
         : '';
 
-    // Voice messages show as a WhatsApp-style voice note bubble with real playback
+    // Voice messages: use a native <audio> element — 100% reliable across all browsers
     const bubbleContent = (role === 'user' && audioUrl)
-        ? `<div class="voice-note-bubble" data-audio="${audioUrl}">
-            <button class="voice-play-btn" aria-label="Play voice message">▶️</button>
+        ? `<div class="voice-note-bubble">
+            <span class="voice-mic-icon">🎤</span>
             <div class="voice-note-waveform">
-              ${Array.from({ length: 20 }, () => `<span class="wave-bar" style="--h:${15 + Math.random() * 70}%"></span>`).join('')}
+              ${Array.from({ length: 18 }, () => `<span class="wave-bar" style="--h:${15 + Math.random() * 70}%"></span>`).join('')}
             </div>
-            <span class="voice-note-duration" id="dur-${Date.now()}">0:00</span>
+            <audio class="voice-audio-player" src="${audioUrl}" controls preload="metadata"></audio>
           </div>`
         : `${escapeHtml(text).replace(/\n/g, '<br>')}`;
 
