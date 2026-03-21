@@ -175,15 +175,20 @@ async function sendMessage(text, fromVoice = false) {
     showTypingIndicator();
 
     // ── Dialect detection (runs on EVERY message) ──────────────
+    // For voice messages: ALWAYS run detection — the transcript is our best signal.
+    // For text: run detection only in auto mode (user may have manually picked a dialect).
     let activeDialect = currentDialect;
-    if (currentDialect === 'auto') {
-        // Use local heuristic first; fall back to Gemini's own detection
-        const detected = detectDialectLocal(userText);
+    const detected = detectDialectLocal(userText);
+
+    if (fromVoice) {
+        // Voice transcript is the clearest dialect signal — always prefer the detected result
+        activeDialect = detected || 'auto'; // 'auto' = let Gemini self-detect from the text
+        if (detected) updateDialectUI(detected);
+    } else if (currentDialect === 'auto') {
         activeDialect = detected || 'auto';
-        if (detected) {
-            updateDialectUI(detected);
-        }
+        if (detected) updateDialectUI(detected);
     }
+    // If user manually chose a specific dialect (not auto, not voice), respect their choice.
 
     const { text: response, source } = await askGemini(userText, activeDialect, isLowBandwidth);
 
