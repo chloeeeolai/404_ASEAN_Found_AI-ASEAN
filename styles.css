@@ -319,17 +319,12 @@ body::after {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  scrollbar-width: thin;
-  scrollbar-color: var(--bg-card2) transparent;
+  /* Hide scrollbar but keep scroll functional */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
-
 .chat-messages::-webkit-scrollbar {
-  width: 4px;
-}
-
-.chat-messages::-webkit-scrollbar-thumb {
-  background: var(--bg-card2);
-  border-radius: 4px;
+  display: none;
 }
 
 /* Welcome screen inside chat */

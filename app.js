@@ -242,27 +242,45 @@ function setupSpeechRecognition() {
     recognition.interimResults = true;
 
     recognition.onresult = (event) => {
-        // Accumulate transcript internally — do NOT write to chatInput
         voiceTranscript = '';
         for (let i = 0; i < event.results.length; i++) {
             voiceTranscript += event.results[i][0].transcript;
         }
-        chatInput.placeholder = `🎤 ${voiceTranscript}`;
+        chatInput.placeholder = `🎤 Heard: ${voiceTranscript}`;
     };
 
     recognition.onend = () => {
-        isRecording = false;
-        isVoiceMessage = false;
         voiceBtn.classList.remove('recording');
         voiceBtn.innerHTML = '🎙';
         chatInput.placeholder = 'Type your question in any dialect... or press 🎙 to speak';
+        isRecording = false;
+        isVoiceMessage = false;
 
-        // Stop MediaRecorder — its onstop will fire sendMessage with the audio blob
+        // Snapshot transcript NOW before any async operations clear it
+        const transcript = voiceTranscript.trim();
+        voiceTranscript = '';
+
         if (voiceMediaRecorder && voiceMediaRecorder.state !== 'inactive') {
+            // Stop media recorder — onstop will send with the snapshot
+            voiceMediaRecorder.onstop = () => {
+                const stream = voiceMediaRecorder.stream;
+                if (stream) stream.getTracks().forEach(t => t.stop());
+
+                if (transcript) {
+                    if (voiceAudioChunks.length > 0) {
+                        const blob = new Blob(voiceAudioChunks, { type: 'audio/webm' });
+                        const audioUrl = URL.createObjectURL(blob);
+                        sendMessage(transcript, audioUrl);
+                    } else {
+                        sendMessage(transcript, null);
+                    }
+                }
+                voiceAudioChunks = [];
+            };
             voiceMediaRecorder.stop();
-        } else if (voiceTranscript.trim()) {
-            sendMessage(voiceTranscript, null);
-            voiceTranscript = '';
+        } else if (transcript) {
+            // No MediaRecorder running — just send as plain text
+            sendMessage(transcript, null);
         }
     };
 
@@ -274,22 +292,22 @@ function setupSpeechRecognition() {
         voiceBtn.classList.remove('recording');
         voiceBtn.innerHTML = '🎙';
         chatInput.placeholder = 'Type your question in any dialect... or press 🎙 to speak';
-        if (voiceMediaRecorder && voiceMediaRecorder.state !== 'inactive') voiceMediaRecorder.stop();
     };
 }
 
 voiceBtn.addEventListener('click', async () => {
     if (!recognition) return;
     if (isRecording) {
-        recognition.stop(); // onend will handle cleanup + send
+        // User taps to stop — SpeechRecognition.onend handles everything
+        recognition.stop();
     } else {
-        // Request mic access for BOTH SpeechRecognition AND MediaRecorder
-        let stream;
+        // Try to get mic stream for audio blob recording
+        let stream = null;
         try {
             stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        } catch (err) {
-            chatInput.placeholder = '⚠️ Microphone access denied';
-            return;
+        } catch {
+            // Can't get stream — fall back to transcript-only mode (no playback)
+            console.warn('MediaRecorder unavailable, using transcript-only mode');
         }
 
         isRecording = true;
@@ -301,20 +319,14 @@ voiceBtn.addEventListener('click', async () => {
         chatInput.value = '';
         chatInput.placeholder = '🔴 Listening... speak now';
 
-        // Start MediaRecorder for real audio capture
-        voiceMediaRecorder = new MediaRecorder(stream);
-        voiceMediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) voiceAudioChunks.push(e.data); };
-        voiceMediaRecorder.onstop = () => {
-            stream.getTracks().forEach(t => t.stop()); // release mic
-            if (voiceTranscript.trim()) {
-                const blob = new Blob(voiceAudioChunks, { type: 'audio/webm' });
-                const audioUrl = URL.createObjectURL(blob);
-                sendMessage(voiceTranscript, audioUrl);
-            }
-            voiceTranscript = '';
-            voiceAudioChunks = [];
-        };
-        voiceMediaRecorder.start();
+        if (stream) {
+            voiceMediaRecorder = new MediaRecorder(stream);
+            voiceMediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) voiceAudioChunks.push(e.data); };
+            // Note: onstop is assigned dynamically in recognition.onend so it captures the transcript snapshot
+            voiceMediaRecorder.start();
+        } else {
+            voiceMediaRecorder = null;
+        }
 
         // Start SpeechRecognition for transcript
         const langMap = {
