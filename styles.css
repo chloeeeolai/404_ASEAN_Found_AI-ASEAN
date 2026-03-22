@@ -476,6 +476,48 @@ body::after {
   border-bottom-left-radius: 4px;
 }
 
+/* TTS Listen Button for Bot Messages */
+.bot-tts-controls {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.tts-btn {
+  background: rgba(26, 171, 146, 0.1);
+  color: var(--teal-300);
+  border: 1px solid rgba(26, 171, 146, 0.2);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-family: var(--font-main);
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all var(--transition);
+}
+
+.tts-btn:hover {
+  background: rgba(26, 171, 146, 0.2);
+  transform: translateY(-1px);
+}
+
+.tts-btn.playing {
+  background: rgba(255, 107, 107, 0.15);
+  color: var(--coral);
+  border-color: rgba(255, 107, 107, 0.3);
+  animation: pulseTTS 1.5s infinite alternate;
+}
+
+@keyframes pulseTTS {
+  from { box-shadow: 0 0 0px rgba(255, 107, 107, 0); }
+  to { box-shadow: 0 0 10px rgba(255, 107, 107, 0.2); }
+}
+
 /* Voice note bubble */
 .voice-note-bubble {
   display: flex;

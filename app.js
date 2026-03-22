@@ -111,20 +111,33 @@ function appendMessage(role, text, source = null, audioUrl = null) {
         ? `<span class="source-badge ${source}">${source === 'gemini' ? '✦ Gemini' : source === 'demo' ? '◈ Demo' : '⚡ Fallback'}</span>`
         : '';
 
-    // Voice messages: use a native <audio> element — 100% reliable across all browsers
-    const bubbleContent = (role === 'user' && audioUrl)
-        ? `<div class="voice-note-bubble">
+    // Voice messages show native audio for user
+    let bubbleContent = '';
+    if (role === 'user' && audioUrl) {
+        bubbleContent = `<div class="voice-note-bubble">
             <span class="voice-mic-icon">🎤</span>
             <div class="voice-note-waveform">
               ${Array.from({ length: 18 }, () => `<span class="wave-bar" style="--h:${15 + Math.random() * 70}%"></span>`).join('')}
             </div>
             <audio class="voice-audio-player" src="${audioUrl}" controls preload="metadata"></audio>
-          </div>`
-        : `${escapeHtml(text).replace(/\n/g, '<br>')}`;
+          </div>`;
+    } else {
+        bubbleContent = `<div class="message-text">${escapeHtml(text).replace(/\n/g, '<br>')}</div>`;
+        
+        // Add a Listen button for AI responses!
+        if (role === 'bot') {
+            bubbleContent += `
+              <div class="bot-tts-controls">
+                <button class="tts-btn" aria-label="Read message aloud">
+                  <span class="tts-icon">🔊</span> Listen
+                </button>
+              </div>`;
+        }
+    }
 
     msg.innerHTML = `
     <div class="message-avatar">${avatar}</div>
-    <div>
+    <div class="message-body">
       <div class="message-bubble">${bubbleContent}</div>
       <div class="message-meta">
         ${formatTime()}
@@ -134,7 +147,87 @@ function appendMessage(role, text, source = null, audioUrl = null) {
   `;
     chatMessages.appendChild(msg);
     chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    // Attach TTS listener if this is a bot message
+    if (role === 'bot') {
+        const ttsBtn = msg.querySelector('.tts-btn');
+        if (ttsBtn) {
+            ttsBtn.addEventListener('click', () => toggleTTS(text, ttsBtn));
+        }
+    }
+
     return msg;
+}
+
+// ── Text-To-Speech (TTS) Engine ──────────────────────────────
+let synth = window.speechSynthesis;
+let currentBtn = null;
+
+function toggleTTS(text, btnElement) {
+    if (!synth) {
+        alert("Your browser does not support text-to-speech!");
+        return;
+    }
+
+    // Un-highlight previous button if any
+    if (currentBtn && currentBtn !== btnElement) {
+        currentBtn.innerHTML = '<span class="tts-icon">🔊</span> Listen';
+        currentBtn.classList.remove('playing');
+    }
+
+    // Toggle logic: If clicking the active button while playing, STOP it.
+    if (synth.speaking && currentBtn === btnElement) {
+        synth.cancel();
+        btnElement.innerHTML = '<span class="tts-icon">🔊</span> Listen';
+        btnElement.classList.remove('playing');
+        currentBtn = null;
+        return;
+    }
+
+    // Stop anything currently speaking
+    synth.cancel();
+    currentBtn = btnElement;
+
+    // Remove emojis/excessive markdown symbols for cleaner speech
+    const cleanText = text.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, '').replace(/[*#]/g, '');
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    
+    // Attempt best-effort grouping of TTS dialects
+    const langMap = {
+        iban: 'ms-MY', kadazan: 'ms-MY', javanese: 'id-ID',
+        hokkien: 'zh-TW', cebuano: 'fil-PH', tagalog: 'fil-PH', malay: 'ms-MY', auto: 'ms-MY',
+    };
+    utterance.lang = langMap[currentDialect] || 'ms-MY';
+    utterance.rate = 0.95; // Slightly slower for better clarity with elders
+
+    // Try to grab a Google voice if available (Android/Chrome)
+    const voices = synth.getVoices();
+    const targetedVoice = voices.find(v => v.lang === utterance.lang && v.name.includes('Google'));
+    if (targetedVoice) utterance.voice = targetedVoice;
+
+    // UI Updates
+    btnElement.innerHTML = '<span class="tts-icon">⏹️</span> Stop';
+    btnElement.classList.add('playing');
+
+    utterance.onend = () => {
+        btnElement.innerHTML = '<span class="tts-icon">🔊</span> Listen';
+        btnElement.classList.remove('playing');
+        currentBtn = null;
+    };
+
+    utterance.onerror = () => {
+        btnElement.innerHTML = '<span class="tts-icon">⚠️</span> Error';
+        btnElement.classList.remove('playing');
+        currentBtn = null;
+    };
+
+    // Quick small delay to ensure old speech genuinely stopped before starting new
+    setTimeout(() => synth.speak(utterance), 50);
+}
+
+// Pre-load voices to avoid async lag later
+if (synth && synth.onvoiceschanged !== undefined) {
+    synth.onvoiceschanged = () => synth.getVoices();
 }
 
 function showTypingIndicator() {
