@@ -463,6 +463,12 @@ body::after {
   position: relative;
 }
 
+/* Allow voice messages to bypass the strict 72% max-width so the native audio player fits */
+.message-bubble.voice-bubble-wrapper {
+  max-width: 95%;
+  min-width: 280px;
+}
+
 .message.user .message-bubble {
   background: linear-gradient(135deg, var(--teal-500), var(--teal-400));
   color: #fff;
@@ -523,7 +529,7 @@ body::after {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  width: 240px; /* Fixed width prevents audio control bleeding */
+  width: 100%; /* Expands to fill the unconstrained wrapper */
 }
 
 .voice-note-bubble .voice-top-row {
@@ -564,7 +570,6 @@ body::after {
 /* Native audio element — forced fit inside bubble */
 .voice-audio-player {
   width: 100%;
-  max-width: 240px;
   height: 36px;
   outline: none;
   filter: invert(1) hue-rotate(160deg) saturate(0.7) brightness(1.1);

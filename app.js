@@ -138,7 +138,7 @@ function appendMessage(role, text, source = null, audioUrl = null) {
     msg.innerHTML = `
     <div class="message-avatar">${avatar}</div>
     <div class="message-body">
-      <div class="message-bubble">${bubbleContent}</div>
+      <div class="message-bubble ${audioUrl ? 'voice-bubble-wrapper' : ''}">${bubbleContent}</div>
       <div class="message-meta">
         ${formatTime()}
         ${sourceBadge}

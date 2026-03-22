@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sealion-v6';
+const CACHE_NAME = 'sealion-v7';
 const STATIC_ASSETS = [
   './',
   './index.html',
